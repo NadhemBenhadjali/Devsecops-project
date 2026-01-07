@@ -42,7 +42,7 @@ pipeline {
           }
           steps {
             dir('backend') {
-              sh 'npm ci'
+              sh 'npm ci --verbose'
               sh 'npm run lint'
             }
           }
