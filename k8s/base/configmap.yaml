@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consumesafe-config
+  namespace: consumesafe
+data:
+  # Replace with your real external frontend URL in prod (e.g. https://consumesafe.tn)
+  CORS_ORIGIN: "http://localhost:5173"

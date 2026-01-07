@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumesafe-frontend
+  namespace: consumesafe
+spec:
+  selector:
+    app: consumesafe-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: consumesafe-db
+    environment:
+      POSTGRES_USER: consumesafe
+      POSTGRES_PASSWORD: consumesafe_pass
+      POSTGRES_DB: consumesafe_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - consumesafe_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U consumesafe -d consumesafe_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: consumesafe-backend
+    ports:
+      - "5050:5050"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgres://consumesafe:consumesafe_pass@db:5432/consumesafe_db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    
+  frontend:
+    build: ./frontend
+    container_name: consumesafe-frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./frontend/.env
+    environment:
+      - VITE_API_URL=http://localhost:5050
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  consumesafe_pg:

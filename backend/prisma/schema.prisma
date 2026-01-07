@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Product {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  brand               String?  @default("")
+  category            String?  @default("")
+  country             String?  @default("")
+  isBoycotted         Boolean  @default(false)
+  reason              String?  @default("")
+  tunisianAlternative String?  @default("")
+  createdAt           DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([isBoycotted], map: "idx_products_boycotted")
+  @@map("products")
+}

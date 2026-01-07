@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumesafe-postgres
+  namespace: consumesafe
+spec:
+  selector:
+    app: consumesafe-postgres
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: consumesafe-postgres
+  namespace: consumesafe
+spec:
+  serviceName: consumesafe-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumesafe-postgres
+  template:
+    metadata:
+      labels:
+        app: consumesafe-postgres
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: consumesafe
+            - name: POSTGRES_PASSWORD
+              value: consumesafe_pass
+            - name: POSTGRES_DB
+              value: consumesafe_db
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U consumesafe -d consumesafe_db"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U consumesafe -d consumesafe_db"]
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
