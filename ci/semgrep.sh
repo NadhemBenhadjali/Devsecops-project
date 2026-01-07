@@ -1,9 +1,11 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -e
 
-mkdir -p reports
+echo "==> Semgrep SAST (OWASP + Secrets + Security Audit)"
 
-echo "==> Semgrep SAST (auto rules)"
-semgrep --config auto --metrics=off --sarif --output reports/semgrep.sarif
-
-echo "OK: semgrep completed (see reports/semgrep.sarif)"
+docker run --rm -v "$PWD:/src" returntocorp/semgrep:1.82.0 \
+  semgrep scan \
+  --config p/security-audit \
+  --config p/secrets \
+  --config p/owasp-top-ten \
+  --error
