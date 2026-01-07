@@ -732,7 +732,7 @@ Create a new user account (automatically assigned USER role).
 **Response:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": example",
   "user": {
     "id": 2,
     "email": "user@example.com",
@@ -755,7 +755,7 @@ Authenticate user and receive JWT token.
 **Response:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": "example",
   "user": {
     "id": 1,
     "email": "admin@consumesafe.tn",
