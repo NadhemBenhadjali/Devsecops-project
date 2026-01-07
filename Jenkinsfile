@@ -95,11 +95,6 @@ pipeline {
       steps {
         sh 'bash ci/semgrep.sh'
       }
-      post {
-        always {
-          archiveArtifacts artifacts: 'reports/semgrep.sarif', allowEmptyArchive: true
-        }
-      }
     }
 
     stage('Build Docker Images') {
