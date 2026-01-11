@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+# Some CI agents ship the Docker CLI without the buildx plugin.
+# In that case, forcing BuildKit can emit noisy errors. Fall back to the classic builder.
+if ! docker buildx version >/dev/null 2>&1; then
+  export DOCKER_BUILDKIT=0
+fi
+
 SHORTSHA="$(cat .git/shortsha 2>/dev/null || git rev-parse --short HEAD)"
 
 REGISTRY="${REGISTRY:-ghcr.io}"
@@ -19,7 +25,7 @@ FRONTEND_IMAGE=$FRONTEND_IMAGE
 EOF
 
 echo "==> Building backend image: $BACKEND_IMAGE"
-docker build -t "$BACKEND_IMAGE" ./backend
+docker build --pull --no-cache -t "$BACKEND_IMAGE" -f backend/Dockerfile ./backend
 
 echo "==> Building frontend image: $FRONTEND_IMAGE"
 

@@ -1,38 +1,41 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
-# Install OpenSSL for Prisma (required for Alpine Linux)
-RUN apk add --no-cache openssl
+# Keep OS packages patched, and install runtime deps (Prisma needs libssl in slim images)
+RUN set -eux; \
+  apt-get update; \
+  apt-get -y upgrade; \
+  apt-get install -y --no-install-recommends openssl ca-certificates; \
+  rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Ensure npm's bundled dependencies (e.g. glob/cross-spawn) include the latest security fixes
+# Pin to a known-good version to keep builds deterministic.
+ARG NPM_VERSION=11.7.0
+RUN npm install -g "npm@${NPM_VERSION}" \
+  && npm --version
+
 WORKDIR /app
 
-# Create non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Create non-root user for security (Debian/Ubuntu style)
+RUN groupadd --system appgroup \
+  && useradd --system --gid appgroup --home-dir /home/appuser --create-home appuser
 
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies (includes Prisma)
-RUN npm ci --omit=dev
+# Install deps (include dev deps for prisma generate)
+RUN npm ci
 
-# Copy Prisma schema and generate client
 COPY prisma ./prisma
 RUN npx prisma generate
 
-# Copy only source code (not node_modules thanks to .dockerignore)
+# Remove dev deps after build step
+RUN npm prune --omit=dev
+
 COPY src ./src
 
-# Change ownership to non-root user
 RUN chown -R appuser:appgroup /app
 
-# Switch to non-root user
 USER appuser
-
-# Set environment
 ENV NODE_ENV=production
 
-# Expose port
 EXPOSE 5050
-
-# Start server
 CMD ["node", "src/server.js"]

@@ -16,13 +16,10 @@ pipeline {
 
   environment {
     NODE_VERSION = '20'
-
-    // Container build/push (set in Jenkins credentials / global env)
-    // Example: REGISTRY=ghcr.io  IMAGE_NAMESPACE=my-org
     REGISTRY = "${env.REGISTRY ?: 'ghcr.io'}"
     IMAGE_NAMESPACE = "${env.IMAGE_NAMESPACE ?: 'replace-me'}"
-
-    // K8s deploy (store kubeconfig as a file credential named 'kubeconfig-staging' / 'kubeconfig-prod')
+    TRIVY_CACHE_DIR = "${WORKSPACE}/.trivy-cache"
+    DOCKER_HOST = "unix:///var/run/docker.sock"
     K8S_NAMESPACE = 'consumesafe'
   }
 
@@ -95,28 +92,37 @@ pipeline {
       steps {
         sh 'bash ci/semgrep.sh'
       }
+      post {
+        always {
+          archiveArtifacts artifacts: 'frontend/dist/**, reports/**', allowEmptyArchive: true
+        }
+      }
     }
 
     stage('Build Docker Images') {
-      agent any
       steps {
         sh 'bash ci/docker_build.sh'
+        sh 'cat .ci/image_tags.env'
       }
     }
 
     stage('Container Scan (Trivy)') {
       agent {
-        docker { image 'aquasec/trivy:0.50.2'; args '--entrypoint="" -v /var/run/docker.sock:/var/run/docker.sock' }
-      }
-      steps {
-        sh 'bash ci/trivy_scan.sh'
-      }
-      post {
-        always {
-          archiveArtifacts artifacts: 'reports/trivy-*.txt', allowEmptyArchive: true
+        docker {
+          image 'aquasec/trivy:0.50.2'
+          args '--entrypoint="" -u 0:0 -v /var/run/docker.sock:/var/run/docker.sock'
+          reuseNode true
+
         }
       }
+      steps {
+        sh 'mkdir -p "$TRIVY_CACHE_DIR" reports'
+        sh 'command -v docker >/dev/null 2>&1 && docker version || true'
+        sh 'trivy --version'
+        sh 'sh ci/trivy_scan.sh'
+      }
     }
+
 
     stage('Push Images') {
       when { expression { return env.IMAGE_NAMESPACE != 'replace-me' } }

@@ -1,5 +1,15 @@
 FROM node:20-alpine
 
+# Keep base image packages patched
+RUN set -eux; \
+    apk update; \
+    apk upgrade
+
+# Ensure npm's bundled dependencies (e.g. glob/cross-spawn) include the latest security fixes
+ARG NPM_VERSION=11.7.0
+RUN npm install -g "npm@${NPM_VERSION}" \
+  && npm --version
+
 # Set working directory
 WORKDIR /app
 

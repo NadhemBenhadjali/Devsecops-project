@@ -1,0 +1,3 @@
+# CVE-2023-45853 (zlib1g) is reported against Debian 12 slim images as having no upstream fix.
+# We track it here so CI remains signal-rich for fixable issues.
+CVE-2023-45853
