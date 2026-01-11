@@ -45,7 +45,16 @@ app.use(cors({ origin: corsOrigin }));
 
 const windowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
 const max = Number(process.env.RATE_LIMIT_MAX || 100);
-app.use(rateLimit({ windowMs, max }));
+// Health endpoint for Kubernetes probes (not rate-limited)
+app.get("/healthz", (req, res) => res.status(200).send("ok"));
+
+const limiter = rateLimit({
+  windowMs,
+  max,
+  // Do not rate-limit kube probes / internal health checks
+  skip: (req) => req.path === "/healthz",
+});
+app.use(limiter);
 
 await initDb();
 

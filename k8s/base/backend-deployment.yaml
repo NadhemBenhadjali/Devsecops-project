@@ -7,6 +7,7 @@ metadata:
     app: consumesafe-backend
 spec:
   replicas: 2
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: consumesafe-backend
@@ -16,15 +17,31 @@ spec:
         app: consumesafe-backend
     spec:
       securityContext:
+        runAsNonRoot: true
+        # IMPORTANT: numeric UID/GID fixes the "non-numeric user" error
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: backend
-          # Set by CI with kubectl set image
-          image: ghcr.io/replace-me/consumesafe-backend:latest
+          image: ghcr.io/nadhembenhadjali/consumesafe-backend:59bd3a8
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5050
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: NODE_ENV
               value: "production"
@@ -45,31 +62,20 @@ spec:
                   key: CORS_ORIGIN
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 5050
             initialDelaySeconds: 10
-            periodSeconds: 10
             timeoutSeconds: 2
+            periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 5050
             initialDelaySeconds: 20
-            periodSeconds: 20
             timeoutSeconds: 2
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
+            periodSeconds: 20
+            failureThreshold: 3
           volumeMounts:
             - name: tmp
               mountPath: /tmp

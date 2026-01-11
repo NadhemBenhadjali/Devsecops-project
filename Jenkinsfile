@@ -17,7 +17,7 @@ pipeline {
   environment {
     NODE_VERSION = '20'
     REGISTRY = "${env.REGISTRY ?: 'ghcr.io'}"
-    IMAGE_NAMESPACE = "${env.IMAGE_NAMESPACE ?: 'replace-me'}"
+    IMAGE_NAMESPACE = "${env.IMAGE_NAMESPACE ?: 'nadhembenhadjali'}"  
     TRIVY_CACHE_DIR = "${WORKSPACE}/.trivy-cache"
     DOCKER_HOST = "unix:///var/run/docker.sock"
     K8S_NAMESPACE = 'consumesafe'
@@ -127,7 +127,7 @@ pipeline {
     stage('Push Images') {
       when { expression { return env.IMAGE_NAMESPACE != 'replace-me' } }
       steps {
-        withCredentials([usernamePassword(credentialsId: 'registry-creds', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+        withCredentials([usernamePassword(credentialsId: 'github-nadhem', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
           sh 'bash ci/docker_push.sh'
         }
       }
@@ -142,7 +142,7 @@ pipeline {
       }
       steps {
         script {
-          def kubeCred = params.DEPLOY_ENV == 'prod' ? 'kubeconfig-prod' : 'kubeconfig-staging'
+          def kubeCred = params.DEPLOY_ENV == 'prod' ? 'kubeconfig-file' : 'kubeconfig-file'
           withCredentials([file(credentialsId: kubeCred, variable: 'KUBECONFIG_FILE')]) {
             sh 'bash ci/k8s_deploy.sh'
           }
@@ -161,7 +161,7 @@ pipeline {
         docker { image 'curlimages/curl:8.6.0'; args '--entrypoint=""' }
       }
       steps {
-        sh 'bash ci/smoke_test.sh'
+        sh 'sh ci/smoke_test.sh'
       }
     }
   }

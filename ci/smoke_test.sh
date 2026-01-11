@@ -3,10 +3,6 @@ set -eu
 
 K8S_NAMESPACE="${K8S_NAMESPACE:-consumesafe}"
 
-# Provide one of these from Jenkins env/params:
-#   BACKEND_URL=https://api.consume... (preferred)
-#   FRONTEND_URL=https://consume...
-
 if [ -n "${BACKEND_URL:-}" ]; then
   echo "==> Smoke: backend /"
   curl -fsSL "$BACKEND_URL/" | head -c 500 || true

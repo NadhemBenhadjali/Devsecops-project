@@ -1078,3 +1078,22 @@ SOFTWARE.
 *استهلك بوعي • Consommez consciemment • Consume Consciously*
 
 </div>
+
+
+## Kubernetes notes (probes & GHCR)
+
+- The backend now exposes a lightweight **`GET /healthz`** endpoint intended for Kubernetes liveness/readiness probes and it is **excluded from rate-limiting**.
+- The Kubernetes manifests in `k8s/base` were updated to:
+  - Probe `GET /healthz` on the backend.
+  - Pin container images to the `:59bd3a8` tag and set `imagePullPolicy: IfNotPresent` (avoids `:latest` always-pull behavior).
+
+### If you see `ErrImagePull` / `401 Unauthorized` from `ghcr.io`
+
+If your GHCR images are private, your cluster needs credentials to pull them. One option:
+
+```bash
+kubectl -n consumesafe create secret docker-registry ghcr-cred   --docker-server=ghcr.io   --docker-username=<GITHUB_USERNAME>   --docker-password=<GITHUB_PAT_WITH_read:packages>   --docker-email=<EMAIL>
+
+# attach the secret to the default ServiceAccount in the namespace
+kubectl -n consumesafe patch serviceaccount default   -p '{"imagePullSecrets":[{"name":"ghcr-cred"}]}'
+```
