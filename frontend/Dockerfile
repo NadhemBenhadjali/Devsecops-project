@@ -1,42 +1,26 @@
-FROM node:20-alpine
-
-# Keep base image packages patched
-RUN set -eux; \
-    apk update; \
-    apk upgrade
-
-# Ensure npm's bundled dependencies (e.g. glob/cross-spawn) include the latest security fixes
-ARG NPM_VERSION=11.7.0
-RUN npm install -g "npm@${NPM_VERSION}" \
-  && npm --version
-
-# Set working directory
+# ---------- Build stage ----------
+FROM node:20-alpine AS build
 WORKDIR /app
 
-# Create non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
+COPY . .
+RUN npm run build
 
-# Copy source code (node_modules excluded via .dockerignore)
-COPY src ./src
-COPY index.html ./
-COPY vite.config.js ./
-COPY tailwind.config.js ./
-COPY postcss.config.js ./
+# ---------- Runtime stage ----------
+# Use a maintained Alpine tag and upgrade OS packages to pick up security fixes.
+FROM nginxinc/nginx-unprivileged:stable-alpine
 
-# Change ownership to non-root user
-RUN chown -R appuser:appgroup /app
+# The base image defaults to an unprivileged user, so switch to root only
+# for the package upgrade.
+USER root
+RUN apk --no-cache upgrade
+USER nginx
 
-# Switch to non-root user
-USER appuser
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Expose port
-EXPOSE 5173
-
-# Start dev server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+EXPOSE 8080
